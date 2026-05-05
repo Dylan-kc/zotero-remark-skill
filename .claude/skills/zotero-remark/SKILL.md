@@ -62,14 +62,21 @@ def get_all_collections(zot):
     return all_collections
 
 # 遍历所有收藏夹，找到名称匹配的那个
-def find_collection(zot, folder_name):
+# 支持路径解析：用户说"自由阅读/补充学习"时，取最后一个文件夹名"补充学习"
+def find_collection(zot, folder_path):
+    """根据路径找到收藏夹，路径中的最后一个文件夹名作为目标名称"""
+    # 取路径中最后一个文件夹名
+    parts = folder_path.split('/')
+    target_name = parts[-1].strip()
+    
     collections = get_all_collections(zot)
+    # 精确匹配
     for col in collections:
-        if col['data']['name'].lower() == folder_name.lower():
+        if col['data']['name'].lower() == target_name.lower():
             return col
     # 模糊匹配
     for col in collections:
-        if folder_name.lower() in col['data']['name'].lower():
+        if target_name.lower() in col['data']['name'].lower():
             return col
     return None
 ```
@@ -98,15 +105,19 @@ def get_papers_from_collection(zot, collection_key, batch_size=20):
         item_type = item['data'].get('itemType', '')
         title = item['data'].get('title', '')
         
-        # 跳过附件类型的条目
-        if item_type == 'attachment':
+        # 跳过附件类型的条目（attachment, note, annotation等）
+        if item_type in ('attachment', 'note', 'annotation'):
             continue
-        # 跳过 PDF/全文附件（标题中含 PDF、Full Text 等）
+        # 跳过 PDF/全文附件（标题中含 PDF、Full Text、SAGE、ScienceDirect、Snapshot 等）
         skip_titles = ['Full Text PDF', 'PDF', 'SAGE', 'ScienceDirect', 'Snapshot']
         if any(t in title for t in skip_titles):
             continue
-        # 跳过无标题的笔记类条目
+        # 跳过无标题的条目
         if not title:
+            continue
+        # 只保留主要文献类型（journalArticle, book, bookSection, conferencePaper, report, thesis等）
+        valid_types = ('journalArticle', 'book', 'bookSection', 'conferencePaper', 'report', 'thesis', 'workingPaper')
+        if item_type not in valid_types:
             continue
             
         papers.append({'key': item['key'], 'title': title})
@@ -178,12 +189,12 @@ def add_remark(item_key, zot, remark):
 ### Step 6: 批量处理主流程
 
 ```python
-def process_folder(folder_name, batch_size=20, limit=None):
-    """主流程：处理整个文件夹"""
+def process_folder(folder_path, batch_size=20, limit=None):
+    """主流程：处理整个文件夹，folder_path支持路径格式如'自由阅读/补充学习'"""
     zot = get_zotero_client()
-    col = find_collection(zot, folder_name)
+    col = find_collection(zot, folder_path)
     if not col:
-        print(f"未找到文件夹: {folder_name}")
+        print(f"未找到文件夹: {folder_path}")
         return
     
     col_key = col['key']
@@ -240,21 +251,24 @@ def process_folder(folder_name, batch_size=20, limit=None):
 
 ## 交互方式
 
-用户告诉你要处理的文件夹名称后，按照以下步骤操作：
+用户告诉你要处理的文件夹路径后，按照以下步骤操作：
 
-1. **确认文件夹**：查询 Zotero 中所有收藏夹，找到用户指定的文件夹，显示名称和包含的文献数量
-2. **分批处理**：每次处理 20 或 50 条（用户可指定），处理前先显示该批次的文献列表
-3. **逐条确认**：每条文献显示标题、摘要和生成的 remark，用户确认后写入
-4. **处理完成**：汇总报告，显示成功添加的条数、跳过的条数（含已有 remark 和无摘要的）
+1. **路径解析**：用户说"自由阅读/补充学习"时，取最后一个文件夹名"补充学习"作为目标名称，避免重名干扰
+2. **确认文件夹**：查询 Zotero 中所有收藏夹，找到目标文件夹，显示名称和包含的文献数量
+3. **过滤条目**：只处理主要文献条目（journalArticle、book、conferencePaper等），跳过attachment、note、annotation、PDF等
+4. **分批处理**：每次处理 20 或 50 条（用户可指定），处理前先显示该批次的文献列表
+5. **逐条确认**：每条文献显示标题、摘要和生成的 remark，用户确认后写入
+6. **处理完成**：汇总报告，显示成功添加的条数、跳过的条数（含已有 remark 和无摘要的）
 
 ## 重要提示
 
 - **Remark 字段位置**：在 Zotero API 中，remark 存储在 `item['data']['extra']` 中，读取时用 `full_item['data'].get('extra', '')`，写入时设置 `item['data']['extra']`
 - **Remark 格式**：`remark: 内容`，remark 前没有缩进，是 extra 中的一个独立行
 - **检查已有 remark**：写入前必须检查是否已存在 remark，避免重复写入
-- **跳过附件**：通过 `collection_items()` 获取的条目包含大量 PDF 附件，必须按 itemType 和标题过滤
 - **Python 路径**：使用 `/opt/anaconda3/bin/python` 运行 pyzotero（系统 Python 可能没有安装该库）
 - **API 分页问题**：Zotero API 每页返回 100 条，**`zot.collections()` 和 `zot.collection_items()` 都会截断**，必须使用循环获取全部数据！
 - **确认目标文件夹**：处理前先显示文件夹名称、key、文献数量，避免处理错误文件夹
 - **中英文统一处理**：所有文献都用中文生成 remark，不论原文是中文还是英文
 - **无摘要处理**：如果文献没有摘要（abstractNote 为空），跳过并记录，但这种情况很少
+- **路径解析**：用户指定文件夹时，如果包含路径如"自由阅读/补充学习"，只取最后一个文件夹名"补充学习"作为匹配目标，避免重名干扰
+- **条目过滤**：只处理主要文献类型（journalArticle、book、conferencePaper等），跳过 attachment、note、annotation、PDF 附件等
