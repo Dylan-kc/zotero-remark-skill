@@ -62,7 +62,8 @@ def get_all_collections(zot):
     return all_collections
 
 # 遍历所有收藏夹，找到名称匹配的那个
-# 支持路径解析：用户说"自由阅读/补充学习"时，取最后一个文件夹名"补充学习"
+# 用户提供的路径如 "Readability/文本分析/中 经济C"，取最后一个文件夹名作为目标名称
+# 文件夹名可能包含空格（如"中 经济C"），必须精确匹配
 def find_collection(zot, folder_path):
     """根据路径找到收藏夹，路径中的最后一个文件夹名作为目标名称"""
     # 取路径中最后一个文件夹名
@@ -70,13 +71,13 @@ def find_collection(zot, folder_path):
     target_name = parts[-1].strip()
     
     collections = get_all_collections(zot)
-    # 精确匹配
+    # 精确匹配（大小写敏感，包含空格的名称）
+    for col in collections:
+        if col['data']['name'] == target_name:
+            return col
+    # 大小写不敏感的精确匹配
     for col in collections:
         if col['data']['name'].lower() == target_name.lower():
-            return col
-    # 模糊匹配
-    for col in collections:
-        if target_name.lower() in col['data']['name'].lower():
             return col
     return None
 ```
@@ -257,7 +258,7 @@ def process_folder(folder_path, batch_size=50, limit=None):
 
 用户告诉你要处理的文件夹路径后，按照以下步骤操作：
 
-1. **路径解析**：用户说"自由阅读/补充学习"时，取最后一个文件夹名"补充学习"作为目标名称，避免重名干扰
+1. **路径解析**：用户说"Readability/文本分析/中 经济C"时，取最后一个文件夹名"中 经济C"作为目标名称（注意空格，精确匹配）
 2. **确认文件夹**：查询 Zotero 中所有收藏夹，找到目标文件夹，显示名称和包含的文献数量
 3. **过滤条目**：只处理主要文献条目（journalArticle、book、conferencePaper等），跳过attachment、note、annotation、PDF等
 4. **分批处理**：固定每批处理 50 条（不足 50 条则一次性处理），处理前先显示该批次的文献列表
@@ -274,5 +275,5 @@ def process_folder(folder_path, batch_size=50, limit=None):
 - **确认目标文件夹**：处理前先显示文件夹名称、key、文献数量，避免处理错误文件夹
 - **中英文统一处理**：所有文献都用中文生成 remark，不论原文是中文还是英文
 - **无摘要处理**：如果文献没有摘要（abstractNote 为空），跳过并记录，但这种情况很少
-- **路径解析**：用户指定文件夹时，如果包含路径如"自由阅读/补充学习"，只取最后一个文件夹名"补充学习"作为匹配目标，避免重名干扰
+- **路径解析**：用户指定文件夹时，如果包含路径如"Readability/文本分析/中 经济C"，只取最后一个文件夹名"中 经济C"作为匹配目标。文件夹名可能包含空格，必须精确匹配（大小写敏感）。
 - **条目过滤**：只处理主要文献类型（journalArticle、book、conferencePaper等），跳过 attachment、note、annotation、PDF 附件等
