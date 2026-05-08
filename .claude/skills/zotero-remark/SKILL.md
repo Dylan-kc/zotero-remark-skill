@@ -84,7 +84,7 @@ def find_collection(zot, folder_path):
 ### Step 2: 获取文件夹中的文献（过滤附件，处理分页）
 
 ```python
-def get_papers_from_collection(zot, collection_key, batch_size=20):
+def get_papers_from_collection(zot, collection_key, batch_size=50):
     """获取收藏夹中所有实际论文（排除附件），每次返回一批
     
     注意：collection_items 也分页，每页 100 条，需要循环获取全部
@@ -189,8 +189,12 @@ def add_remark(item_key, zot, remark):
 ### Step 6: 批量处理主流程
 
 ```python
-def process_folder(folder_path, batch_size=20, limit=None):
-    """主流程：处理整个文件夹，folder_path支持路径格式如'自由阅读/补充学习'"""
+def process_folder(folder_path, batch_size=50, limit=None):
+    """主流程：处理整个文件夹，folder_path支持路径格式如'自由阅读/补充学习'
+    
+    Args:
+        batch_size: 每批处理数量，默认 50。不足 50 条则一次性处理完所有文献。
+    """
     zot = get_zotero_client()
     col = find_collection(zot, folder_path)
     if not col:
@@ -256,7 +260,7 @@ def process_folder(folder_path, batch_size=20, limit=None):
 1. **路径解析**：用户说"自由阅读/补充学习"时，取最后一个文件夹名"补充学习"作为目标名称，避免重名干扰
 2. **确认文件夹**：查询 Zotero 中所有收藏夹，找到目标文件夹，显示名称和包含的文献数量
 3. **过滤条目**：只处理主要文献条目（journalArticle、book、conferencePaper等），跳过attachment、note、annotation、PDF等
-4. **分批处理**：每次处理 20 或 50 条（用户可指定），处理前先显示该批次的文献列表
+4. **分批处理**：固定每批处理 50 条（不足 50 条则一次性处理），处理前先显示该批次的文献列表
 5. **逐条确认**：每条文献显示标题、摘要和生成的 remark，用户确认后写入
 6. **处理完成**：汇总报告，显示成功添加的条数、跳过的条数（含已有 remark 和无摘要的）
 
