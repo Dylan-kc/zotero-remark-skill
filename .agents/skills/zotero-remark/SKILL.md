@@ -121,8 +121,11 @@ def get_papers_from_collection(zot, collection_key, batch_size=50):
         # 跳过无标题的条目
         if not title:
             continue
-        # 只保留主要文献类型（journalArticle, book, bookSection, conferencePaper, report, thesis等）
-        valid_types = ('journalArticle', 'book', 'bookSection', 'conferencePaper', 'report', 'thesis', 'workingPaper')
+        # 只保留主要文献类型。Zotero 的 preprint 与 workingPaper 是两个独立类型，必须同时纳入。
+        valid_types = (
+            'journalArticle', 'book', 'bookSection', 'conferencePaper',
+            'report', 'thesis', 'workingPaper', 'preprint'
+        )
         if item_type not in valid_types:
             continue
 
@@ -420,4 +423,4 @@ def process_folder(folder_path, batch_size=50, limit=None, user_prompt=''):
 - **中英文统一处理**：所有文献都用中文生成 remark，不论原文是中文还是英文
 - **无摘要处理**：如果文献没有摘要（abstractNote 为空），跳过并记录，但这种情况很少
 - **路径解析**：用户指定文件夹时，如果包含路径如"Readability/文本分析/中 经济C"，只取最后一个文件夹名"中 经济C"作为匹配目标。文件夹名可能包含空格，必须精确匹配（大小写敏感）。
-- **条目过滤**：只处理主要文献类型（journalArticle、book、conferencePaper等），跳过 attachment、note、annotation、PDF 附件等
+- **条目过滤**：只处理主要文献类型（journalArticle、book、conferencePaper、workingPaper、preprint 等），跳过 attachment、note、annotation、PDF 附件等。注意 Zotero 的 `preprint` 与 `workingPaper` 是两个独立的 `itemType`，预印本不能仅靠 `workingPaper` 覆盖。
