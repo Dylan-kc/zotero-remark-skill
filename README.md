@@ -1,6 +1,6 @@
 # Zotero Remark
 
-Claude Code Skill — 批量为 Zotero 文献添加简记
+Codex / Claude Code Skill — 批量为 Zotero 文献添加简记
 
 根据文献摘要自动生成一句话总结，并可为筛选后的文献添加摘要翻译、研究话题相关度评级和关键词标签。
 
@@ -32,21 +32,29 @@ Claude Code Skill — 批量为 Zotero 文献添加简记
 
 ## 前置条件
 
-### 1. 安装 pyzotero
+### 1. 创建环境并安装依赖
 
 ```bash
-/opt/anaconda3/bin/python -m pip install pyzotero
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
 ### 2. 配置 Zotero API 凭证
 
-在项目根目录创建 `.env` 文件：
+复制示例文件并填写自己的 Zotero 凭证：
 
+```bash
+cp .env.example .env
 ```
-ZOTERO_LIBRARY_ID=你的用户ID
+
+```dotenv
+ZOTERO_LIBRARY_ID=你的用户或群组ID
 ZOTERO_API_KEY=你的API密钥
-ZOTERO_LIBRARY_TYPE=user  # 或 group
+ZOTERO_LIBRARY_TYPE=user
 ```
+
+`.env` 已加入 `.gitignore`。不要将 API Key、私人文献数据或包含真实凭证的测试文件提交到仓库。
 
 获取方式：
 - **User ID**: Zotero → 编辑 → 偏好设置 → 同步（页面顶部显示）
@@ -54,26 +62,22 @@ ZOTERO_LIBRARY_TYPE=user  # 或 group
 
 ### 3. 安装 Skill
 
-将 `zotero-remark` 文件夹放到项目的 `.claude/skills/` 目录下：
+本仓库同时提供 Codex 和 Claude Code 目录。将相应的 `zotero-remark` 文件夹复制到目标项目：
 
 ```
-项目/
-├── .claude/
-│   └── skills/
-│       └── zotero-remark/
-│           ├── SKILL.md
-│           └── scripts/
-│               └── update_ratings_tags.py
-└── .env
+Codex:       .agents/skills/zotero-remark/
+Claude Code: .claude/skills/zotero-remark/
 ```
+
+两个目录中的技能内容应保持一致。
 
 ## 使用方式
 
-在 Claude Code 中直接描述需求，例如：
+在 Codex 或 Claude Code 中直接描述需求，例如：
 
 > "帮我处理『无形资产/readability』文件夹中的文献，每次处理 30 条"
 
-Claude 会自动：
+代理会自动：
 1. 连接到你的 Zotero 账户
 2. 定位目标文件夹
 3. 逐条读取文献摘要
@@ -114,7 +118,7 @@ translate: 这里是英文摘要的中文翻译
 
 ## 技术细节
 
-- **Python 路径**: `/opt/anaconda3/bin/python`
+- **Python**: Python 3，推荐使用项目内的 `.venv`
 - **API**: Zotero Web API v3
 - **Remark 位置**: `item['data']['extra']`
 - **中英文处理**: 无论原文是中文还是英文，remark 均用中文生成
@@ -122,6 +126,11 @@ translate: 这里是英文摘要的中文翻译
 - **相关度评级**: 星级作为 Zotero `tags` 中的独立标签；每篇仅保留一个星级
 - **关键词标签**: 每个关键词以独立 `#关键词` 写入 Zotero `tags`，保留其他原标签
 
+## 贡献与安全
+
+- 欢迎通过 Issue 或 Pull Request 提交问题、改进和兼容性修复，具体流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 若发现可能泄露凭证、越权修改 Zotero 数据或其他安全问题，请不要公开披露，按 [SECURITY.md](SECURITY.md) 私下报告。
+
 ## License
 
-MIT
+本项目采用 [MIT License](LICENSE)。
